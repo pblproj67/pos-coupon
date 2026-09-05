@@ -67,7 +67,7 @@ def main():
 
     lines = load_lines()
 
-    HEIGHT = 400
+    HEIGHT = 300
 
     img = Image.new(
         "L",
@@ -109,7 +109,7 @@ def main():
 
         # Detect actual non-white artwork
         mask = art.point(
-            lambda p: 255 if p < 245 else 0
+            lambda p: 0 if p < 190 else 255
         )
 
         bbox = mask.getbbox()
@@ -122,8 +122,8 @@ def main():
         print("Cropped artwork size:", art.size)
 
         # Maximum bottle dimensions
-        max_art_width = 155
-        max_art_height = HEIGHT - 30
+        max_art_width = 125
+        max_art_height = HEIGHT - 24
 
         scale = min(
             max_art_width / art.width,
