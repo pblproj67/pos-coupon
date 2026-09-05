@@ -34,8 +34,7 @@ def load_lines():
 
     lines = data.get("lines", [])
 
-    # Remove trailing blanks only.
-    # Intentional blank lines inside A1:A10 remain.
+    # Remove trailing blanks only
     while lines and str(lines[-1]).strip() == "":
         lines.pop()
 
@@ -47,7 +46,6 @@ def fit_font(draw, text, max_width, start_size, bold=True):
 
     while size > 10:
         f = font(size, bold)
-
         box = draw.textbbox((0, 0), text, font=f)
 
         if box[2] - box[0] <= max_width:
@@ -60,76 +58,122 @@ def fit_font(draw, text, max_width, start_size, bold=True):
 
 def main():
 
+    print("Current directory:", os.getcwd())
+    print("Artwork path:", ART_FILE)
+    print("Artwork exists:", os.path.exists(ART_FILE))
+
+    if os.path.exists("assets"):
+        print("Assets folder contains:", os.listdir("assets"))
+
     lines = load_lines()
 
-    # Temporary height. We can make this dynamic later.
     HEIGHT = 400
 
-    img = Image.new("L", (WIDTH, HEIGHT), 255)
+    img = Image.new(
+        "L",
+        (WIDTH, HEIGHT),
+        255
+    )
+
     draw = ImageDraw.Draw(img)
 
-    # Border
+    # ------------------------------------------
+    # BORDER
+    # ------------------------------------------
+
     draw.rectangle(
         [3, 3, WIDTH - 4, HEIGHT - 4],
         outline=0,
         width=3
     )
 
-    # Whiskey artwork area
-    art_width = 155
-    art_x = WIDTH - art_width - 12
-    art_y = 60
+    # ------------------------------------------
+    # LAYOUT
+    # ------------------------------------------
+
+    reserved_art_width = 155
 
     text_left = MARGIN
-    text_right = art_x - 10
+    text_right = WIDTH - reserved_art_width - 22
     text_width = text_right - text_left
 
-if os.path.exists(ART_FILE):
+    # ------------------------------------------
+    # WHISKEY BOTTLE
+    # ------------------------------------------
 
-    art = Image.open(ART_FILE).convert("L")
+    if os.path.exists(ART_FILE):
 
-    # Find all non-white artwork pixels
-    mask = art.point(lambda p: 255 if p < 245 else 0)
+        art = Image.open(ART_FILE).convert("L")
 
-    bbox = mask.getbbox()
+        print("Original artwork size:", art.size)
 
-    if bbox:
-        # Automatically remove all surrounding white space
-        art = art.crop(bbox)
+        # Detect actual non-white artwork
+        mask = art.point(
+            lambda p: 255 if p < 245 else 0
+        )
 
-    # Bottle target size
-    max_art_width = 155
-    max_art_height = HEIGHT - 40
+        bbox = mask.getbbox()
 
-    scale = min(
-        max_art_width / art.width,
-        max_art_height / art.height
-    )
+        print("Artwork bounding box:", bbox)
 
-    new_width = int(art.width * scale)
-    new_height = int(art.height * scale)
+        if bbox:
+            art = art.crop(bbox)
 
-    art = art.resize(
-        (new_width, new_height),
-        Image.Resampling.LANCZOS
-    )
+        print("Cropped artwork size:", art.size)
 
-    # Convert artwork for thermal printing
-    art = art.point(
-        lambda p: 0 if p < 175 else 255
-    )
+        # Maximum bottle dimensions
+        max_art_width = 155
+        max_art_height = HEIGHT - 30
 
-    # Position bottle against right side
-    # art_x = WIDTH - new_width - 15
-    # art_y = HEIGHT - new_height - 15
+        scale = min(
+            max_art_width / art.width,
+            max_art_height / art.height
+        )
 
-    art_width = 155
-    art_x = WIDTH - art_width - 12
+        new_width = max(
+            1,
+            int(art.width * scale)
+        )
 
-    img.paste(
-        art,
-        (art_x, art_y)
-    )
+        new_height = max(
+            1,
+            int(art.height * scale)
+        )
+
+        art = art.resize(
+            (new_width, new_height),
+            Image.Resampling.LANCZOS
+        )
+
+        # Thermal-friendly B/W
+        art = art.point(
+            lambda p: 0 if p < 190 else 255
+        )
+
+        # Put bottle against RIGHT edge
+        art_x = WIDTH - new_width - 14
+
+        # Vertically center bottle
+        art_y = (HEIGHT - new_height) // 2
+
+        print(
+            "Final artwork:",
+            new_width,
+            "x",
+            new_height,
+            "at",
+            art_x,
+            art_y
+        )
+
+        img.paste(
+            art,
+            (art_x, art_y)
+        )
+
+    else:
+        print("WARNING: whiskey.png NOT FOUND")
+
     # ------------------------------------------
     # TEXT
     # ------------------------------------------
@@ -143,6 +187,7 @@ if os.path.exists(ART_FILE):
             continue
 
         if i == 0:
+
             f = fit_font(
                 draw,
                 text,
@@ -150,9 +195,11 @@ if os.path.exists(ART_FILE):
                 58,
                 True
             )
+
             spacing = 10
 
         elif i == 1:
+
             f = fit_font(
                 draw,
                 text,
@@ -160,9 +207,11 @@ if os.path.exists(ART_FILE):
                 27,
                 True
             )
+
             spacing = 14
 
         else:
+
             f = fit_font(
                 draw,
                 text,
@@ -170,6 +219,7 @@ if os.path.exists(ART_FILE):
                 18,
                 True
             )
+
             spacing = 9
 
         draw.text(
@@ -187,10 +237,17 @@ if os.path.exists(ART_FILE):
 
         y = box[3] + spacing
 
-    # Convert to TRUE 1-bit black/white
+    # ------------------------------------------
+    # TRUE 1-BIT B/W
+    # ------------------------------------------
+
     img = img.point(
         lambda p: 0 if p < 160 else 255
     ).convert("1")
+
+    # ------------------------------------------
+    # SAVE
+    # ------------------------------------------
 
     os.makedirs(
         os.path.dirname(OUTPUT_FILE),
