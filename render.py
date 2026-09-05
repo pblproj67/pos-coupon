@@ -84,44 +84,52 @@ def main():
     text_right = art_x - 10
     text_width = text_right - text_left
 
-    if os.path.exists(ART_FILE):
+if os.path.exists(ART_FILE):
 
-        art = Image.open(ART_FILE).convert("L")
+    art = Image.open(ART_FILE).convert("L")
 
-        # Remove near-white background
-        art = art.point(
-            lambda p: 255 if p > 225 else p
-        )
+    # Find all non-white artwork pixels
+    mask = art.point(lambda p: 255 if p < 245 else 0)
 
-        ratio = art_width / art.width
+    bbox = mask.getbbox()
 
-        art = art.resize(
-            (
-                art_width,
-                int(art.height * ratio)
-            ),
-            Image.Resampling.LANCZOS
-        )
+    if bbox:
+        # Automatically remove all surrounding white space
+        art = art.crop(bbox)
 
-        if art.height > HEIGHT - 90:
-            ratio = (HEIGHT - 90) / art.height
+    # Bottle target size
+    max_art_width = 155
+    max_art_height = HEIGHT - 40
 
-            art = art.resize(
-                (
-                    int(art.width * ratio),
-                    HEIGHT - 90
-                ),
-                Image.Resampling.LANCZOS
-            )
+    scale = min(
+        max_art_width / art.width,
+        max_art_height / art.height
+    )
 
-        img.paste(
-            art,
-            (
-                WIDTH - art.width - 12,
-                art_y
-            )
-        )
+    new_width = int(art.width * scale)
+    new_height = int(art.height * scale)
 
+    art = art.resize(
+        (new_width, new_height),
+        Image.Resampling.LANCZOS
+    )
+
+    # Convert artwork for thermal printing
+    art = art.point(
+        lambda p: 0 if p < 175 else 255
+    )
+
+    # Position bottle against right side
+    # art_x = WIDTH - new_width - 15
+    # art_y = HEIGHT - new_height - 15
+
+    art_width = 155
+    art_x = WIDTH - art_width - 12
+
+    img.paste(
+        art,
+        (art_x, art_y)
+    )
     # ------------------------------------------
     # TEXT
     # ------------------------------------------
