@@ -109,7 +109,7 @@ def main():
 
         # Detect actual non-white artwork
         mask = art.point(
-            lambda p: 0 if p < 190 else 255
+            lambda p: 0 if p < 150 else 255
         )
 
         bbox = mask.getbbox()
@@ -122,8 +122,8 @@ def main():
         print("Cropped artwork size:", art.size)
 
         # Maximum bottle dimensions
-        max_art_width = 125
-        max_art_height = HEIGHT - 24
+        max_art_width = 145
+        max_art_height = 190
 
         scale = min(
             max_art_width / art.width,
@@ -154,7 +154,7 @@ def main():
         art_x = WIDTH - new_width - 14
 
         # Vertically center bottle
-        art_y = (HEIGHT - new_height) // 2
+        art_y = HEIGHT - new_height - 18
 
         print(
             "Final artwork:",
